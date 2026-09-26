@@ -2,11 +2,13 @@
 
 import React, { useState, useRef } from "react";
 import { toPng } from "html-to-image";
-import { Download, Sparkles, Image as ImageIcon } from "lucide-react";
+import { Download, Sparkles, Image as ImageIcon, Loader2 } from "lucide-react";
+import { generateAIPosterTheme } from "@/lib/gemini";
 
 export default function Home() {
   const posterRef = useRef<HTMLDivElement>(null);
-  
+  const [loadingAI, setLoadingAI] = useState(false);
+
   // Form State
   const [formData, setFormData] = useState({
     name: "আবুল মিয়া",
@@ -17,21 +19,39 @@ export default function Home() {
     occasion: "বিজয় দিবস",
   });
 
+  // Dynamic Theme State (Driven by Gemini)
+  const [theme, setTheme] = useState({
+    gradient: "from-emerald-950 via-slate-900 to-red-950",
+    border: "border-amber-500/50",
+    banner: "from-red-800 to-emerald-800",
+  });
+
   const [photo, setPhoto] = useState<string | null>(null);
 
-  // Photo Upload Handler
+  // Magic AI Theme Generator Trigger
+  const handleAIGenerate = async () => {
+    setLoadingAI(true);
+    const aiResult = await generateAIPosterTheme(formData.occasion, formData.headline);
+    if (aiResult) {
+      setTheme({
+        gradient: aiResult.themeGradient,
+        border: aiResult.borderColor,
+        banner: aiResult.bannerColor,
+      });
+      setFormData((prev) => ({ ...prev, headline: aiResult.refinedHeadline }));
+    }
+    setLoadingAI(false);
+  };
+
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhoto(reader.result as string);
-      };
+      reader.onloadend = () => setPhoto(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-  // Download Poster as High-Res PNG
   const handleDownload = async () => {
     if (posterRef.current === null) return;
     try {
@@ -49,10 +69,10 @@ export default function Home() {
     <main className="min-h-screen bg-slate-900 text-white p-4 md:p-8">
       <header className="max-w-6xl mx-auto mb-8 flex justify-between items-center border-b border-slate-800 pb-4">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-red-500 to-emerald-500 bg-clip-text text-transparent">
-          NetaMaker AI
+          AI Political Poster Maker
         </h1>
         <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full">
-          Bangla Poster Generator
+          NetaMaker AI Engine
         </span>
       </header>
 
@@ -60,11 +80,35 @@ export default function Home() {
         
         {/* LEFT COLUMN: Input Form */}
         <div className="lg:col-span-6 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-emerald-400" /> পোস্টারের তথ্য পূরণ করুন
-          </h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-400" /> পোস্টারের তথ্য পূরণ করুন
+            </h2>
+            <button
+              onClick={handleAIGenerate}
+              disabled={loadingAI}
+              className="bg-gradient-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-md disabled:opacity-50"
+            >
+              {loadingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {loadingAI ? "AI ডিজাইনিং..." : "AI Magic Theme"}
+            </button>
+          </div>
 
           <div className="space-y-3">
+            <div>
+              <label className="text-xs text-slate-400">উপলক্ষ (Occasion)</label>
+              <select
+                value={formData.occasion}
+                onChange={(e) => setFormData({ ...formData, occasion: e.target.value })}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-emerald-500 text-white"
+              >
+                <option value="বিজয় দিবস">বিজয় দিবস</option>
+                <option value="শোক সভা / শ্রদ্ধাঞ্জলি">শোক সভা / শ্রদ্ধাঞ্জলি</option>
+                <option value="নির্বাচনী প্রচার">নির্বাচনী প্রচার</option>
+                <option value="ঈদ শুভেচ্ছা">ঈদ শুভেচ্ছা</option>
+              </select>
+            </div>
+
             <div>
               <label className="text-xs text-slate-400">আপনার নাম (বাংলায়)</label>
               <input
@@ -127,10 +171,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Live Poster Preview Engine */}
+        {/* RIGHT COLUMN: Live Dynamic Canvas */}
         <div className="lg:col-span-6 flex flex-col items-center">
           <div className="w-full flex justify-between items-center mb-3">
-            <h2 className="text-sm font-semibold text-slate-400">লাইভ প্রিভিউ (Print-Ready Canvas)</h2>
+            <h2 className="text-sm font-semibold text-slate-400">AI Dynamic Canvas Preview</h2>
             <button
               onClick={handleDownload}
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg transition-all"
@@ -139,14 +183,13 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Printable HTML Canvas Canvas Reference */}
+          {/* Dynamic AI Styled Canvas */}
           <div
             ref={posterRef}
-            className="w-[380px] h-[520px] bg-gradient-to-b from-emerald-900 via-slate-900 to-red-950 rounded-xl overflow-hidden shadow-2xl border-4 border-amber-500/40 relative flex flex-col justify-between p-4"
+            className={`w-[380px] h-[520px] bg-gradient-to-b ${theme.gradient} rounded-xl overflow-hidden shadow-2xl border-4 ${theme.border} relative flex flex-col justify-between p-4 transition-all duration-500`}
           >
-            {/* Top Bar: Occasion & Decorative Header */}
             <div className="text-center space-y-1">
-              <span className="bg-amber-500 text-slate-950 font-extrabold text-[10px] uppercase px-3 py-0.5 rounded-full tracking-wider">
+              <span className="bg-amber-400 text-slate-950 font-black text-[10px] uppercase px-3 py-0.5 rounded-full tracking-wider">
                 {formData.occasion}
               </span>
               <h1 className="text-xl font-black text-amber-300 drop-shadow-md leading-tight mt-1">
@@ -154,9 +197,8 @@ export default function Home() {
               </h1>
             </div>
 
-            {/* Center: Leader Photo Frame */}
             <div className="flex-1 flex items-center justify-center my-2">
-              <div className="w-40 h-48 border-2 border-amber-400 rounded-lg overflow-hidden bg-slate-800 shadow-inner flex items-center justify-center relative">
+              <div className="w-40 h-48 border-2 border-amber-400/80 rounded-lg overflow-hidden bg-slate-900/80 shadow-inner flex items-center justify-center relative">
                 {photo ? (
                   <img src={photo} alt="Leader" className="w-full h-full object-cover" />
                 ) : (
@@ -168,8 +210,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Footer Bar: Political Credit Banner */}
-            <div className="bg-gradient-to-r from-red-800 to-emerald-800 border-t-2 border-amber-400 p-2.5 text-center rounded-lg space-y-0.5">
+            <div className={`bg-gradient-to-r ${theme.banner} border-t-2 border-amber-400 p-2.5 text-center rounded-lg space-y-0.5`}>
               <p className="text-[10px] text-amber-200 uppercase font-semibold">শুভেচ্ছান্তে</p>
               <h3 className="text-base font-bold text-white tracking-wide">{formData.name}</h3>
               <p className="text-[11px] text-slate-200 font-medium">{formData.designation}</p>
