@@ -2,7 +2,7 @@
 import React from "react";
 
 interface LeaderPhotoProps {
-  src?: string;
+  src?: string | null;
   alt: string;
   size?: "sm" | "md" | "lg";
 }

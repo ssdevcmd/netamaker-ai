@@ -9,6 +9,7 @@ interface EditPosterModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedPoster: PosterData) => Promise<void>;
+  onFullEdit?: () => void;
 }
 
 export const EditPosterModal: React.FC<EditPosterModalProps> = ({
