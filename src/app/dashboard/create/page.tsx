@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toPng } from "html-to-image";
@@ -11,7 +11,8 @@ import { posterService } from "@/services/posterService";
 import { PosterData } from "@/types/poster";
 import { toast } from "react-toastify";
 
-export default function CreatePosterPage() {
+// 1. Form and Page Content Component
+function CreatePosterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const posterRef = useRef<HTMLDivElement>(null);
@@ -84,6 +85,7 @@ export default function CreatePosterPage() {
       </div>
     );
   }
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -95,7 +97,7 @@ export default function CreatePosterPage() {
   const handleAIGenerate = async () => {
     setLoadingAI(true);
     try {
-      const aiResult = await generateAIPosterTheme(poster.occasion, poster.headline);
+      const aiResult = await generateAIPosterTheme(poster.occasion || "", poster.headline);
       if (aiResult) {
         setPoster((prev) => ({
           ...prev,
@@ -149,7 +151,7 @@ export default function CreatePosterPage() {
   const handleSavePoster = async () => {
     setLoading(true);
     try {
-      const posterId = (poster._id || poster.id) as string;
+      const posterId = (poster._id || poster.id || "") as string;
 
       if (isEditing && posterId) {
         await posterService.updatePoster(posterId, poster);
@@ -369,9 +371,24 @@ export default function CreatePosterPage() {
             <h2 className="text-sm font-semibold text-slate-400">AI Dynamic Canvas Preview</h2>
           </div>
 
-          <PosterCanvas data={poster} canvasRef={posterRef} />
+          <PosterCanvas ref={posterRef} data={poster} />
         </div>
       </div>
     </main>
+  );
+}
+
+// 2. Default Export wrapped with Suspense to resolve Next.js Prerender build errors
+export default function CreatePosterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+        </div>
+      }
+    >
+      <CreatePosterForm />
+    </Suspense>
   );
 }
